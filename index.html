@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function BudgetTracker() {
+            const [expenses, setExpenses] = useState([]);
+            const [description, setDescription] = useState('');
+            const [amount, setAmount] = useState('');
+            const [category, setCategory] = useState('Food');
+            const [paymentMethod, setPaymentMethod] = useState('purse');
+            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+            const [view, setView] = useState('daily');
+            const [activeUser, setActiveUser] = useState('me');
+            const [loading, setLoading] = useState(true);
+            const [myName, setMyName] = useState('');
+            const [gfName, setGfName] = useState('');
+            const [showSettings, setShowSettings] = useState(false);
+            
+            const [accountBalance, setAccountBalance] = useState(0);
+            const [purseBalance, setPurseBalance] = useState(0);
+            const [showBalanceModal, setShowBalanceModal] = useState(false);
+            const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+            const [newAccountBalance, setNewAccountBalance] = useState('');
+            const [withdrawAmount, setWithdrawAmount] = useState('');
+
+            const [loans, setLoans] = useState([]);
+            const [showLoanModal, setShowLoanModal] = useState(false);
+            const [showSettleModal, setShowSettleModal] = useState(false);
+            const [loanPerson, setLoanPerson] = useState('');
+            const [loanAmount, setLoanAmount] = useState('');
+            const [loanDate, setLoanDate] = useState(new Date().toISOString().split('T')[0]);
+            const [loanNote, setLoanNote] = useState('');
+            const [settleAmount, setSettleAmount] = useState('');
+            const [selectedLoan, setSelectedLoan] = useState(null);
+
+            const categories = ['Food', 'Transportation', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Other'];
+
+            useEffect(() => {
+                loadData();
+            }, [activeUser]);
+
+            const loadData = () => {
+                setLoading(true);
+                try {
+                    const storedExpenses = localStorage.getItem(`expenses:${activeUser}`);
+                    const storedMyName = localStorage.getItem('user:myName');
+                    const storedGfName = localStorage.getItem('user:gfName');
+                    const storedAccount = localStorage.getItem(`balance:account:${activeUser}`);
+                    const storedPurse = localStorage.getItem(`balance:purse:${activeUser}`);
+                    const storedLoans = localStorage.getItem(`loans:${activeUser}`);
+
+                    if (storedExpenses) setExpenses(JSON.parse(storedExpenses));
+                    else setExpenses([]);
+
+                    if (storedMyName) setMyName(storedMyName);
+                    if (storedGfName) setGfName(storedGfName);
+                    
+                    if (storedAccount) setAccountBalance(parseFloat(storedAccount));
+                    else setAccountBalance(0);
+                    
+                    if (storedPurse) setPurseBalance(parseFloat(storedPurse));
+                    else setPurseBalance(0);
+
+                    if (storedLoans) setLoans(JSON.parse(storedLoans));
+                    else setLoans([]);
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                }
+                setLoading(false);
+            };
+
+            const saveExpenses = (newExpenses) => {
+                localStorage.setItem(`expenses:${activeUser}`, JSON.stringify(newExpenses));
+                setExpenses(newExpenses);
+            };
+
+            const saveLoans = (newLoans) => {
+                localStorage.setItem(`loans:${activeUser}`, JSON.stringify(newLoans));
+                setLoans(newLoans);
+            };
+
+            const saveBalances = (account, purse) => {
+                localStorage.setItem(`balance:account:${activeUser}`, account.toString());
+                localStorage.setItem(`balance:purse:${activeUser}`, purse.toString());
+                setAccountBalance(account);
+                setPurseBalance(purse);
+            };
+
+            const saveNames = () => {
+                localStorage.setItem('user:myName', myName);
+                localStorage.setItem('user:gfName', gfName);
+                setShowSettings(false);
+            };
+
+            const updateAccountBalance = () => {
+                if (newAccountBalance !== '') {
+                    const balance = parseFloat(newAccountBalance);
+                    saveBalances(balance, purseBalance);
+                    setNewAccountBalance('');
+                    setShowBalanceModal(false);
+                }
+            };
+
+            const withdrawToPurse = () => {
+                if (withdrawAmount !== '') {
+                    const amount = parseFloat(withdrawAmount);
+                    if (amount > accountBalance) {
+                        alert('Insufficient account balance!');
+                        return;
+                    }
+                    saveBalances(accountBalance - amount, purseBalance + amount);
+                    setWithdrawAmount('');
+                    setShowWithdrawModal(false);
+                }
+            };
+
+            const addLoan = () => {
+                if (loanPerson && loanAmount && loanDate) {
+                    const newLoan = {
+                        id: Date.now(),
+                        person: loanPerson,
+                        amount: parseFloat(loanAmount),
+                        settled: 0,
+                        date: loanDate,
+                        note: loanNote,
+                        settlements: []
+                    };
+                    const updated = [...loans, newLoan];
+                    saveLoans(updated);
+                    setLoanPerson('');
+                    setLoanAmount('');
+                    setLoanNote('');
+                    setLoanDate(new Date().toISOString().split('T')[0]);
+                    setShowLoanModal(false);
+                }
+            };
+
+            const settleLoan = () => {
+                if (settleAmount !== '' && selectedLoan) {
+                    const amount = parseFloat(settleAmount);
+                    const remaining = selectedLoan.amount - selectedLoan.settled;
+                    
+                    if (amount > remaining) {
+                        alert('Settlement amount cannot exceed remaining balance!');
+                        return;
+                    }
+
+                    const updated = loans.map(loan => {
+                        if (loan.id === selectedLoan.id) {
+                            return {
+                                ...loan,
+                                settled: loan.settled + amount,
+                                settlements: [...loan.settlements, {
+                                    amount,
+                                    date: new Date().toISOString().split('T')[0],
+                                    timestamp: Date.now()
+                                }]
+                            };
+                        }
+                        return loan;
+                    });
+
+                    saveLoans(updated);
+                    setSettleAmount('');
+                    setSelectedLoan(null);
+                    setShowSettleModal(false);
+                }
+            };
+
+            const deleteLoan = (id) => {
+                const updated = loans.filter(loan => loan.id !== id);
+                saveLoans(updated);
+            };
+
+            const getTotalLoans = () => {
+                return loans.reduce((sum, loan) => sum + loan.amount, 0);
+            };
+
+            const getTotalSettled = () => {
+                return loans.reduce((sum, loan) => sum + loan.settled, 0);
+            };
+
+            const getTotalPending = () => {
+                return getTotalLoans() - getTotalSettled();
+            };
+
+            const exportToCSV = () => {
+                let csvContent = "DATA_TYPE,USER,ID,DATE,DESCRIPTION,AMOUNT,CATEGORY,PAYMENT_METHOD,PERSON,NOTE,SETTLED,SETTLEMENTS\n";
+                
+                expenses.forEach(exp => {
+                    csvContent += `EXPENSE,${activeUser},${exp.id},${exp.date},"${exp.description}",${exp.amount},${exp.category},${exp.paymentMethod},,,\n`;
+                });
+                
+                loans.forEach(loan => {
+                    const settlementsStr = JSON.stringify(loan.settlements).replace(/"/g, '""');
+                    csvContent += `LOAN,${activeUser},${loan.id},${loan.date},"${loan.note || ''}",${loan.amount},,,"${loan.person}",,${loan.settled},"${settlementsStr}"\n`;
+                });
+                
+                csvContent += `BALANCE,${activeUser},account,,Account Balance,${accountBalance},,,,,\n`;
+                csvContent += `BALANCE,${activeUser},purse,,Purse Balance,${purseBalance},,,,,\n`;
+                csvContent += `NAME,me,,,${myName},,,,,\n`;
+                csvContent += `NAME,gf,,,${gfName},,,,,\n`;
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `budget_tracker_${activeUser}_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const importFromCSV = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const text = e.target.result;
+                        const lines = text.split('\n').slice(1);
+                        
+                        const newExpenses = [];
+                        const newLoans = [];
+                        let newAccountBalance = accountBalance;
+                        let newPurseBalance = purseBalance;
+                        let importedMyName = myName;
+                        let importedGfName = gfName;
+                        
+                        lines.forEach(line => {
+                            if (!line.trim()) return;
+                            
+                            const parts = line.split(',');
+                            const type = parts[0];
+                            const user = parts[1];
+                            
+                            if (user !== activeUser && type !== 'NAME') return;
+                            
+                            if (type === 'EXPENSE') {
+                                const description = parts[4].replace(/^"|"$/g, '');
+                                newExpenses.push({
+                                    id: parseInt(parts[2]),
+                                    date: parts[3],
+                                    description,
+                                    amount: parseFloat(parts[5]),
+                                    category: parts[6],
+                                    paymentMethod: parts[7]
+                                });
+                            } else if (type === 'LOAN') {
+                                const note = parts[4].replace(/^"|"$/g, '');
+                                const person = parts[8].replace(/^"|"$/g, '');
+                                const settlementsStr = parts[11].replace(/^"|"$/g, '').replace(/""/g, '"');
+                                let settlements = [];
+                                try {
+                                    if (settlementsStr) {
+                                        settlements = JSON.parse(settlementsStr);
+                                    }
+                                } catch (e) {
+                                    settlements = [];
+                                }
+                                
+                                newLoans.push({
+                                    id: parseInt(parts[2]),
+                                    date: parts[3],
+                                    note,
+                                    amount: parseFloat(parts[5]),
+                                    person,
+                                    settled: parseFloat(parts[10]),
+                                    settlements
+                                });
+                            } else if (type === 'BALANCE') {
+                                const balanceType = parts[2];
+                                if (balanceType === 'account') {
+                                    newAccountBalance = parseFloat(parts[5]);
+                                } else if (balanceType === 'purse') {
+                                    newPurseBalance = parseFloat(parts[5]);
+                                }
+                            } else if (type === 'NAME') {
+                                if (user === 'me') {
+                                    importedMyName = parts[4];
+                                } else if (user === 'gf') {
+                                    importedGfName = parts[4];
+                                }
+                            }
+                        });
+                        
+                        if (newExpenses.length > 0) saveExpenses(newExpenses);
+                        if (newLoans.length > 0) saveLoans(newLoans);
+                        saveBalances(newAccountBalance, newPurseBalance);
+                        
+                        if (importedMyName !== myName || importedGfName !== gfName) {
+                            setMyName(importedMyName);
+                            setGfName(importedGfName);
+                            localStorage.setItem('user:myName', importedMyName);
+                            localStorage.setItem('user:gfName', importedGfName);
+                        }
+                        
+                        alert('Data imported successfully!');
+                        loadData();
+                    } catch (error) {
+                        console.error('Import error:', error);
+                        alert('Failed to import data. Please check the CSV format.');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            };
+
+            const addExpense = () => {
+                if (description && amount && date) {
+                    const expenseAmount = parseFloat(amount);
+                    
+                    if (paymentMethod === 'purse' && expenseAmount > purseBalance) {
+                        alert('Insufficient purse balance!');
+                        return;
+                    }
+                    
+                    if (paymentMethod === 'account' && expenseAmount > accountBalance) {
+                        alert('Insufficient account balance!');
+                        return;
+                    }
+
+                    const newExpense = {
+                        id: Date.now(),
+                        description,
+                        amount: expenseAmount,
+                        category,
+                        paymentMethod,
+                        date
+                    };
+                    
+                    const updated = [...expenses, newExpense];
+                    saveExpenses(updated);
+                    
+                    if (paymentMethod === 'purse') {
+                        saveBalances(accountBalance, purseBalance - expenseAmount);
+                    } else {
+                        saveBalances(accountBalance - expenseAmount, purseBalance);
+                    }
+                    
+                    setDescription('');
+                    setAmount('');
+                    setCategory('Food');
+                }
+            };
+
+            const deleteExpense = (exp) => {
+                const updated = expenses.filter(e => e.id !== exp.id);
+                saveExpenses(updated);
+                
+                if (exp.paymentMethod === 'purse') {
+                    saveBalances(accountBalance, purseBalance + exp.amount);
+                } else {
+                    saveBalances(accountBalance + exp.amount, purseBalance);
+                }
+            };
+
+            const getDailySummary = () => {
+                const summary = {};
+                expenses.forEach(exp => {
+                    if (!summary[exp.date]) {
+                        summary[exp.date] = 0;
+                    }
+                    summary[exp.date] += exp.amount;
+                });
+                return Object.entries(summary).sort((a, b) => b[0].localeCompare(a[0]));
+            };
+
+            const getMonthlySummary = () => {
+                const summary = {};
+                expenses.forEach(exp => {
+                    const month = exp.date.substring(0, 7);
+                    if (!summary[month]) {
+                        summary[month] = { total: 0, byCategory: {} };
+                    }
+                    summary[month].total += exp.amount;
+                    if (!summary[month].byCategory[exp.category]) {
+                        summary[month].byCategory[exp.category] = 0;
+                    }
+                    summary[month].byCategory[exp.category] += exp.amount;
+                });
+                return Object.entries(summary).sort((a, b) => b[0].localeCompare(a[0]));
+            };
+
+            const getTotalExpenses = () => {
+                return expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            };
+
+            const dailySummary = getDailySummary();
+            const monthlySummary = getMonthlySummary();
+            const displayName = activeUser === 'me' ? (myName || 'My') : (gfName || "Girlfriend's");
+
+            if (loading) {
+                return React.createElement('div', { className: 'min-h-screen flex items-center justify-center' },
+                    React.createElement('div', { className: 'text-indigo-600 text-xl' }, 'Loading...')
+                );
+            }
+
+            return React.createElement('div', { className: 'p-4' },
+                React.createElement('div', { className: 'max-w-6xl mx-auto' },
+                    React.createElement('div', { className: 'bg-white rounded-lg shadow-lg p-6 mb-6' },
+                        React.createElement('div', { className: 'flex flex-wrap justify-between items-start gap-4 mb-6' },
+                            React.createElement('div', null,
+                                React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, '💰 Budget Tracker'),
+                                React.createElement('p', { className: 'text-gray-600' }, 'Track expenses for both of you'),
+                                React.createElement('p', { className: 'text-xs text-green-600 mt-1' }, '✓ Data stored locally on this device')
+                            ),
+                            React.createElement('div', { className: 'flex flex-wrap gap-2' },
+                                React.createElement('button', {
+                                    onClick: exportToCSV,
+                                    className: 'px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm'
+                                }, '📥 Export'),
+                                React.createElement('label', { className: 'px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer text-sm' },
+                                    '📤 Import',
+                                    React.createElement('input', {
+                                        type: 'file',
+                                        accept: '.csv',
+                                        onChange: importFromCSV,
+                                        className: 'hidden'
+                                    })
+                                ),
+                                React.createElement('button', {
+                                    onClick: () => setShowSettings(!showSettings),
+                                    className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm'
+                                }, '⚙️ Settings')
+                            )
+                        ),
+                        
+                        showSettings && React.createElement('div', { className: 'bg-indigo-50 rounded-lg p-4 mb-6' },
+                            React.createElement('h3', { className: 'font-bold text-gray-800 mb-3' }, 'Settings'),
+                            React.createElement('div', { className: 'mb-4' },
+                                React.createElement('h4', { className: 'text-sm font-semibold text-gray-700 mb-2' }, 'User Names'),
+                                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 mb-4' },
+                                    React.createElement('div', null,
+                                        React.createElement('label', { className: 'block text-sm text-gray-600 mb-1' }, 'Your Name'),
+                                        React.createElement('input', {
+                                            type: 'text',
+                                            value: myName,
+                                            onChange: (e) => setMyName(e.target.value),
+                                            placeholder: 'Enter your name',
+                                            className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500'
+                                        })
+                                    ),
+                                    React.createElement('div', null,
+                                        React.createElement('label', { className: 'block text-sm text-gray-600 mb-1' }, "Girlfriend's Name"),
+                                        React.createElement('input', {
+                                            type: 'text',
+                                            value: gfName,
+                                            onChange: (e) => setGfName(e.target.value),
+                                            placeholder: "Enter girlfriend's name",
+                                            className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500'
+                                        })
+                                    )
+                                ),
+                                React.createElement('button', {
+                                    onClick: saveNames,
+                                    className: 'bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition'
+                                }, 'Save Names')
+                            )
+                        ),
+                        
+                        React.createElement('div', { className: 'flex gap-2 mb-6' },
+                            React.createElement('button', {
+                                onClick: () => setActiveUser('me'),
+                                className: `flex-1 px-4 py-3 rounded-lg transition ${activeUser === 'me' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
+                            }, '👤 ' + (myName || 'Me')),
+                            React.createElement('button', {
+                                onClick: () => setActiveUser('gf'),
+                                className: `flex-1 px-4 py-3 rounded-lg transition ${activeUser === 'gf' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
+                            }, '👤 ' + (gfName || 'Girlfriend'))
+                        ),
+                        
+                        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4 mb-6' },
+                            React.createElement('div', {
+                                className: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-4 cursor-pointer hover:shadow-lg transition',
+                                onClick: () => setShowBalanceModal(true)
+                            },
+                                React.createElement('div', { className: 'flex items-center gap-2 mb-2' },
+                                    React.createElement('span', { className: 'text-2xl' }, '💳'),
+                                    React.createElement('p', { className: 'text-sm opacity-90' }, 'Account Balance')
+                                ),
+                                React.createElement('p', { className: 'text-3xl font-bold' }, 'Rs. ' + accountBalance.toFixed(2)),
+                                React.createElement('p', { className: 'text-xs opacity-75 mt-1' }, 'Click to update')
+                            ),
+                            React.createElement('div', { className: 'bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg p-4' },
+                                React.createElement('div', { className: 'flex items-center gap-2 mb-2' },
+                                    React.createElement('span', { className: 'text-2xl' }, '💰'),
+                                    React.createElement('p', { className: 'text-sm opacity-90' }, 'Purse Balance')
+                                ),
+                                React.createElement('p', { className: 'text-3xl font-bold' }, 'Rs. ' + purseBalance.toFixed(2)),
+                                React.createElement('button', {
+                                    onClick: () => setShowWithdrawModal(true),
+                                    className: 'mt-2 text-xs bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded transition'
+                                }, '⬇️ Withdraw')
+                            ),
+                            React.createElement('div', { className: 'bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg p-4' },
+                                React.createElement('div', { className: 'flex items-center gap-2 mb-2' },
+                                    React.createElement('span', { className: 'text-2xl' }, '📊'),
+                                    React.createElement('p', { className: 'text-sm opacity-90' }, 'Total Spent')
+                                ),
+                                React.createElement('p', { className: 'text-3xl font-bold' }, 'Rs. ' + getTotalExpenses().toFixed(2))
+                            )
+                        ),
+                        
+                        React.createElement('p', { className: 'text-center text-gray-600 my-8' }, 'Budget Tracker is working! 🎉'),
+                        React.createElement('p', { className: 'text-center text-sm text-gray-500' }, 'Click Settings to set up names, then switch between users to track expenses.')
+                    )
+                )
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(BudgetTracker));
+    </script>
+</body>
+</html>
