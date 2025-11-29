@@ -3,534 +3,932 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Budget Tracker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>Personal Finance Manager - LKR with Local Storage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #0033A0;
+            --primary-dark: #002270;
+            --secondary: #D50000;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #f44336;
+            --info: #2196F3;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 16px;
+        }
+
         body {
-            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf9 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            padding-bottom: 80px;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230033A0' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 0 16px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 20px 16px;
+            text-align: center;
+            border-bottom-left-radius: 24px;
+            border-bottom-right-radius: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: "";
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .sync-status {
+            background: var(--info);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 12px;
+            margin: 0 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .sync-status.success {
+            background: var(--success);
+        }
+
+        .sync-status.error {
+            background: var(--danger);
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 8px;
+            margin: 0 16px 24px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-item:not(.active):hover {
+            background: var(--light-gray);
+        }
+
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            border-top: 4px solid var(--primary);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title i {
+            background: rgba(0, 51, 160, 0.1);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            border-top: 3px solid var(--primary);
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 8px 0;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--light-gray);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-control.error {
+            border-color: var(--danger);
+        }
+
+        .error-message {
+            color: var(--danger);
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #3d8b40;
+        }
+
+        .btn-warning {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #b30000;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .btn-info {
+            background: var(--info);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #0b7dda;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            width: auto;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 16px 0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        th {
+            background: rgba(0, 51, 160, 0.1);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-active {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        .status-returned {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .chart-container {
+            height: 250px;
+            background: var(--light);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            color: var(--gray);
+            font-style: italic;
+            border: 2px dashed var(--light-gray);
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .nav-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--gray);
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .nav-icon.active {
+            color: var(--primary);
+        }
+
+        .nav-icon i {
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+        }
+
+        .lkr {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .positive {
+            color: var(--success);
+        }
+
+        .negative {
+            color: var(--secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .instructions-card {
+            background: #e3f2fd;
+            border-left: 4px solid var(--info);
+            padding: 16px;
+            border-radius: 0 12px 12px 0;
+            margin: 16px 0;
+        }
+
+        .instructions-card h4 {
+            color: var(--info);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .sync-buttons .btn {
+            width: calc(50% - 6px);
+        }
+
+        .flag-pattern {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 24px;
+            z-index: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            margin-bottom: 16px;
+            color: var(--danger);
+        }
+
+        .modal-message {
+            margin-bottom: 24px;
+            color: var(--dark);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .modal-btn.cancel {
+            background: var(--light-gray);
+            color: var(--dark);
+        }
+
+        .modal-btn.confirm {
+            background: var(--danger);
+            color: white;
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .card {
+                padding: 16px;
+            }
+            
+            .btn {
+                font-size: 1rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 6px;
+            }
+            
+            .btn-sm {
+                width: 100%;
+            }
+            
+            .sync-buttons {
+                flex-direction: column;
+            }
+            
+            .sync-buttons .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-    <div id="root"></div>
+<body>
+    <div class="header">
+        <div class="flag-pattern">🇱🇰</div>
+        <h1><i class="fas fa-wallet"></i> Finance Manager</h1>
+        <p>Local Storage • All values in LKR</p>
+    </div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+    <div class="sync-status success">
+        <i class="fas fa-check-circle"></i>
+        <span id="syncStatusText">Data saved locally • Last update: <span id="lastUpdate"></span></span>
+    </div>
 
-        function BudgetTracker() {
-            const [expenses, setExpenses] = useState([]);
-            const [description, setDescription] = useState('');
-            const [amount, setAmount] = useState('');
-            const [category, setCategory] = useState('Food');
-            const [paymentMethod, setPaymentMethod] = useState('purse');
-            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-            const [view, setView] = useState('daily');
-            const [activeUser, setActiveUser] = useState('me');
-            const [loading, setLoading] = useState(true);
-            const [myName, setMyName] = useState('');
-            const [gfName, setGfName] = useState('');
-            const [showSettings, setShowSettings] = useState(false);
-            
-            const [accountBalance, setAccountBalance] = useState(0);
-            const [purseBalance, setPurseBalance] = useState(0);
-            const [showBalanceModal, setShowBalanceModal] = useState(false);
-            const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-            const [newAccountBalance, setNewAccountBalance] = useState('');
-            const [withdrawAmount, setWithdrawAmount] = useState('');
+    <div class="container">
+        <div class="nav-tabs">
+            <div class="nav-item active" data-tab="dashboard">
+                <i class="fas fa-home"></i> Dashboard
+            </div>
+            <div class="nav-item" data-tab="expenses">
+                <i class="fas fa-list"></i> Expenses
+            </div>
+            <div class="nav-item" data-tab="entry">
+                <i class="fas fa-plus"></i> Add
+            </div>
+            <div class="nav-item" data-tab="loans">
+                <i class="fas fa-file-invoice-dollar"></i> Loans
+            </div>
+            <div class="nav-item" data-tab="charts">
+                <i class="fas fa-chart-pie"></i> Charts
+            </div>
+        </div>
 
-            const [loans, setLoans] = useState([]);
-            const [showLoanModal, setShowLoanModal] = useState(false);
-            const [showSettleModal, setShowSettleModal] = useState(false);
-            const [loanPerson, setLoanPerson] = useState('');
-            const [loanAmount, setLoanAmount] = useState('');
-            const [loanDate, setLoanDate] = useState(new Date().toISOString().split('T')[0]);
-            const [loanNote, setLoanNote] = useState('');
-            const [settleAmount, setSettleAmount] = useState('');
-            const [selectedLoan, setSelectedLoan] = useState(null);
+        <div class="content-section active" id="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Today's Spending</div>
+                    <div class="stat-value lkr" id="todaySpending">රු 0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Monthly Budget Left</div>
+                    <div class="stat-value lkr positive" id="remainingBudget">රු 0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Monthly Expenses</div>
+                    <div class="stat-value lkr" id="monthlyExpenses">රු 0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Card Expenses</div>
+                    <div class="stat-value lkr" id="cardExpenses">රු 0.00</div>
+                </div>
+            </div>
 
-            const categories = ['Food', 'Transportation', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Other'];
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-university"></i> Loan Balance</h3>
+                <div class="stat-value lkr negative" id="totalLoans">රු 0.00</div>
+                <p class="stat-label">Outstanding loans</p>
+            </div>
 
-            useEffect(() => {
-                loadData();
-            }, [activeUser]);
+            <div class="sync-buttons">
+                <button class="btn btn-info" id="exportBtn">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
+                <button class="btn btn-danger" id="clearAllBtn">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+            </div>
+        </div>
 
-            const loadData = () => {
-                setLoading(true);
-                try {
-                    const storedExpenses = localStorage.getItem(`expenses:${activeUser}`);
-                    const storedMyName = localStorage.getItem('user:myName');
-                    const storedGfName = localStorage.getItem('user:gfName');
-                    const storedAccount = localStorage.getItem(`balance:account:${activeUser}`);
-                    const storedPurse = localStorage.getItem(`balance:purse:${activeUser}`);
-                    const storedLoans = localStorage.getItem(`loans:${activeUser}`);
-
-                    if (storedExpenses) setExpenses(JSON.parse(storedExpenses));
-                    else setExpenses([]);
-
-                    if (storedMyName) setMyName(storedMyName);
-                    if (storedGfName) setGfName(storedGfName);
-                    
-                    if (storedAccount) setAccountBalance(parseFloat(storedAccount));
-                    else setAccountBalance(0);
-                    
-                    if (storedPurse) setPurseBalance(parseFloat(storedPurse));
-                    else setPurseBalance(0);
-
-                    if (storedLoans) setLoans(JSON.parse(storedLoans));
-                    else setLoans([]);
-                } catch (error) {
-                    console.error('Error loading data:', error);
-                }
-                setLoading(false);
-            };
-
-            const saveExpenses = (newExpenses) => {
-                localStorage.setItem(`expenses:${activeUser}`, JSON.stringify(newExpenses));
-                setExpenses(newExpenses);
-            };
-
-            const saveLoans = (newLoans) => {
-                localStorage.setItem(`loans:${activeUser}`, JSON.stringify(newLoans));
-                setLoans(newLoans);
-            };
-
-            const saveBalances = (account, purse) => {
-                localStorage.setItem(`balance:account:${activeUser}`, account.toString());
-                localStorage.setItem(`balance:purse:${activeUser}`, purse.toString());
-                setAccountBalance(account);
-                setPurseBalance(purse);
-            };
-
-            const saveNames = () => {
-                localStorage.setItem('user:myName', myName);
-                localStorage.setItem('user:gfName', gfName);
-                setShowSettings(false);
-            };
-
-            const updateAccountBalance = () => {
-                if (newAccountBalance !== '') {
-                    const balance = parseFloat(newAccountBalance);
-                    saveBalances(balance, purseBalance);
-                    setNewAccountBalance('');
-                    setShowBalanceModal(false);
-                }
-            };
-
-            const withdrawToPurse = () => {
-                if (withdrawAmount !== '') {
-                    const amount = parseFloat(withdrawAmount);
-                    if (amount > accountBalance) {
-                        alert('Insufficient account balance!');
-                        return;
-                    }
-                    saveBalances(accountBalance - amount, purseBalance + amount);
-                    setWithdrawAmount('');
-                    setShowWithdrawModal(false);
-                }
-            };
-
-            const addLoan = () => {
-                if (loanPerson && loanAmount && loanDate) {
-                    const newLoan = {
-                        id: Date.now(),
-                        person: loanPerson,
-                        amount: parseFloat(loanAmount),
-                        settled: 0,
-                        date: loanDate,
-                        note: loanNote,
-                        settlements: []
-                    };
-                    const updated = [...loans, newLoan];
-                    saveLoans(updated);
-                    setLoanPerson('');
-                    setLoanAmount('');
-                    setLoanNote('');
-                    setLoanDate(new Date().toISOString().split('T')[0]);
-                    setShowLoanModal(false);
-                }
-            };
-
-            const settleLoan = () => {
-                if (settleAmount !== '' && selectedLoan) {
-                    const amount = parseFloat(settleAmount);
-                    const remaining = selectedLoan.amount - selectedLoan.settled;
-                    
-                    if (amount > remaining) {
-                        alert('Settlement amount cannot exceed remaining balance!');
-                        return;
-                    }
-
-                    const updated = loans.map(loan => {
-                        if (loan.id === selectedLoan.id) {
-                            return {
-                                ...loan,
-                                settled: loan.settled + amount,
-                                settlements: [...loan.settlements, {
-                                    amount,
-                                    date: new Date().toISOString().split('T')[0],
-                                    timestamp: Date.now()
-                                }]
-                            };
-                        }
-                        return loan;
-                    });
-
-                    saveLoans(updated);
-                    setSettleAmount('');
-                    setSelectedLoan(null);
-                    setShowSettleModal(false);
-                }
-            };
-
-            const deleteLoan = (id) => {
-                const updated = loans.filter(loan => loan.id !== id);
-                saveLoans(updated);
-            };
-
-            const getTotalLoans = () => {
-                return loans.reduce((sum, loan) => sum + loan.amount, 0);
-            };
-
-            const getTotalSettled = () => {
-                return loans.reduce((sum, loan) => sum + loan.settled, 0);
-            };
-
-            const getTotalPending = () => {
-                return getTotalLoans() - getTotalSettled();
-            };
-
-            const exportToCSV = () => {
-                let csvContent = "DATA_TYPE,USER,ID,DATE,DESCRIPTION,AMOUNT,CATEGORY,PAYMENT_METHOD,PERSON,NOTE,SETTLED,SETTLEMENTS\n";
+        <div class="content-section" id="expenses">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-list"></i> Recent Expenses</h3>
                 
-                expenses.forEach(exp => {
-                    csvContent += `EXPENSE,${activeUser},${exp.id},${exp.date},"${exp.description}",${exp.amount},${exp.category},${exp.paymentMethod},,,\n`;
-                });
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Amount (LKR)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expensesTableBody">
+                            <tr class="empty-state">
+                                <td colspan="4">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>No expenses yet. Add one to get started!</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 
-                loans.forEach(loan => {
-                    const settlementsStr = JSON.stringify(loan.settlements).replace(/"/g, '""');
-                    csvContent += `LOAN,${activeUser},${loan.id},${loan.date},"${loan.note || ''}",${loan.amount},,,"${loan.person}",,${loan.settled},"${settlementsStr}"\n`;
-                });
+                <button class="btn btn-primary" id="addExpenseFromList">
+                    <i class="fas fa-plus"></i> Add Expense
+                </button>
+            </div>
+        </div>
+
+        <div class="content-section" id="entry">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-plus-circle"></i> Add New Expense</h3>
                 
-                csvContent += `BALANCE,${activeUser},account,,Account Balance,${accountBalance},,,,,\n`;
-                csvContent += `BALANCE,${activeUser},purse,,Purse Balance,${purseBalance},,,,,\n`;
-                csvContent += `NAME,me,,,${myName},,,,,\n`;
-                csvContent += `NAME,gf,,,${gfName},,,,,\n`;
+                <form id="expenseForm">
+                    <div class="form-group">
+                        <label for="amount"><i class="fas fa-rupee-sign"></i> Amount (LKR) *</label>
+                        <input type="number" id="amount" class="form-control" placeholder="0.00" step="0.01" required>
+                        <div class="error-message" id="amountError">Please enter a valid amount</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category"><i class="fas fa-tags"></i> Category *</label>
+                        <select id="category" class="form-control" required>
+                            <option value="">Select Category</option>
+                            <option value="food">Food</option>
+                            <option value="campus">Campus</option>
+                            <option value="travel">Travel</option>
+                            <option value="phone">Phone/Data</option>
+                            <option value="medicine">Medicine</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <div class="error-message" id="categoryError">Please select a category</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="payment"><i class="fas fa-wallet"></i> Payment Type *</label>
+                        <select id="payment" class="form-control" required>
+                            <option value="">Select Payment Type</option>
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="loan">Loan</option>
+                        </select>
+                        <div class="error-message" id="paymentError">Please select a payment type</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="note"><i class="fas fa-sticky-note"></i> Note (Optional)</label>
+                        <input type="text" id="note" class="form-control" placeholder="Add a note...">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Date</label>
+                        <input type="date" id="expenseDate" class="form-control">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> ADD EXPENSE
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="content-section" id="loans">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Add New Loan</h3>
                 
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `budget_tracker_${activeUser}_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
+                <form id="loanForm">
+                    <div class="form-group">
+                        <label>Description *</label>
+                        <input type="text" id="loanDesc" class="form-control" placeholder="e.g., Emergency fund" required>
+                        <div class="error-message" id="loanDescError">Please enter a description</div>
+                    </div>
 
-            const importFromCSV = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
+                    <div class="form-group">
+                        <label>Amount (LKR) *</label>
+                        <input type="number" id="loanAmount" class="form-control" placeholder="0.00" step="0.01" required>
+                        <div class="error-message" id="loanAmountError">Please enter a valid amount</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Borrower *</label>
+                        <select id="loanBorrower" class="form-control" required>
+                            <option value="">Select Person</option>
+                            <option value="me">Me</option>
+                            <option value="partner">My Partner</option>
+                        </select>
+                        <div class="error-message" id="loanBorrowerError">Please select a borrower</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-plus"></i> ADD LOAN
+                    </button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-list"></i> Loan Summary</h3>
                 
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const text = e.target.result;
-                        const lines = text.split('\n').slice(1);
-                        
-                        const newExpenses = [];
-                        const newLoans = [];
-                        let newAccountBalance = accountBalance;
-                        let newPurseBalance = purseBalance;
-                        let importedMyName = myName;
-                        let importedGfName = gfName;
-                        
-                        lines.forEach(line => {
-                            if (!line.trim()) return;
-                            
-                            const parts = line.split(',');
-                            const type = parts[0];
-                            const user = parts[1];
-                            
-                            if (user !== activeUser && type !== 'NAME') return;
-                            
-                            if (type === 'EXPENSE') {
-                                const description = parts[4].replace(/^"|"$/g, '');
-                                newExpenses.push({
-                                    id: parseInt(parts[2]),
-                                    date: parts[3],
-                                    description,
-                                    amount: parseFloat(parts[5]),
-                                    category: parts[6],
-                                    paymentMethod: parts[7]
-                                });
-                            } else if (type === 'LOAN') {
-                                const note = parts[4].replace(/^"|"$/g, '');
-                                const person = parts[8].replace(/^"|"$/g, '');
-                                const settlementsStr = parts[11].replace(/^"|"$/g, '').replace(/""/g, '"');
-                                let settlements = [];
-                                try {
-                                    if (settlementsStr) {
-                                        settlements = JSON.parse(settlementsStr);
-                                    }
-                                } catch (e) {
-                                    settlements = [];
-                                }
-                                
-                                newLoans.push({
-                                    id: parseInt(parts[2]),
-                                    date: parts[3],
-                                    note,
-                                    amount: parseFloat(parts[5]),
-                                    person,
-                                    settled: parseFloat(parts[10]),
-                                    settlements
-                                });
-                            } else if (type === 'BALANCE') {
-                                const balanceType = parts[2];
-                                if (balanceType === 'account') {
-                                    newAccountBalance = parseFloat(parts[5]);
-                                } else if (balanceType === 'purse') {
-                                    newPurseBalance = parseFloat(parts[5]);
-                                }
-                            } else if (type === 'NAME') {
-                                if (user === 'me') {
-                                    importedMyName = parts[4];
-                                } else if (user === 'gf') {
-                                    importedGfName = parts[4];
-                                }
-                            }
-                        });
-                        
-                        if (newExpenses.length > 0) saveExpenses(newExpenses);
-                        if (newLoans.length > 0) saveLoans(newLoans);
-                        saveBalances(newAccountBalance, newPurseBalance);
-                        
-                        if (importedMyName !== myName || importedGfName !== gfName) {
-                            setMyName(importedMyName);
-                            setGfName(importedGfName);
-                            localStorage.setItem('user:myName', importedMyName);
-                            localStorage.setItem('user:gfName', importedGfName);
-                        }
-                        
-                        alert('Data imported successfully!');
-                        loadData();
-                    } catch (error) {
-                        console.error('Import error:', error);
-                        alert('Failed to import data. Please check the CSV format.');
-                    }
-                };
-                reader.readAsText(file);
-                event.target.value = '';
-            };
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Amount (LKR)</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="loansTableBody">
+                            <tr class="empty-state">
+                                <td colspan="4">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>No loans yet.</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            const addExpense = () => {
-                if (description && amount && date) {
-                    const expenseAmount = parseFloat(amount);
-                    
-                    if (paymentMethod === 'purse' && expenseAmount > purseBalance) {
-                        alert('Insufficient purse balance!');
-                        return;
-                    }
-                    
-                    if (paymentMethod === 'account' && expenseAmount > accountBalance) {
-                        alert('Insufficient account balance!');
-                        return;
-                    }
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Outstanding Loans</label>
+                    <div class="stat-value lkr negative" id="outstandingLoans">රු 0.00</div>
+                </div>
+            </div>
+        </div>
 
-                    const newExpense = {
-                        id: Date.now(),
-                        description,
-                        amount: expenseAmount,
-                        category,
-                        paymentMethod,
-                        date
-                    };
-                    
-                    const updated = [...expenses, newExpense];
-                    saveExpenses(updated);
-                    
-                    if (paymentMethod === 'purse') {
-                        saveBalances(accountBalance, purseBalance - expenseAmount);
-                    } else {
-                        saveBalances(accountBalance - expenseAmount, purseBalance);
-                    }
-                    
-                    setDescription('');
-                    setAmount('');
-                    setCategory('Food');
-                }
-            };
+        <div class="content-section" id="charts">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-chart-pie"></i> Expenses by Category (LKR)</h3>
+                <div id="categoryChart" class="chart-container">
+                    <div style="text-align: center;">
+                        <i class="fas fa-chart-pie fa-3x" style="color: var(--primary); margin-bottom: 10px;"></i>
+                        <div>Category breakdown will appear here</div>
+                    </div>
+                </div>
+            </div>
 
-            const deleteExpense = (exp) => {
-                const updated = expenses.filter(e => e.id !== exp.id);
-                saveExpenses(updated);
-                
-                if (exp.paymentMethod === 'purse') {
-                    saveBalances(accountBalance, purseBalance + exp.amount);
-                } else {
-                    saveBalances(accountBalance + exp.amount, purseBalance);
-                }
-            };
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-info-circle"></i> Statistics</h3>
+                <div id="statsInfo"></div>
+            </div>
+        </div>
+    </div>
 
-            const getDailySummary = () => {
-                const summary = {};
-                expenses.forEach(exp => {
-                    if (!summary[exp.date]) {
-                        summary[exp.date] = 0;
-                    }
-                    summary[exp.date] += exp.amount;
-                });
-                return Object.entries(summary).sort((a, b) => b[0].localeCompare(a[0]));
-            };
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <i class="fas fa-exclamation-triangle"></i> <span id="modalTitle">Confirm Action</span>
+            </div>
+            <div class="modal-message" id="modalMessage">
+                Are you sure?
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="modalCancel">Cancel</button>
+                <button class="modal-btn confirm" id="modalConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
 
-            const getMonthlySummary = () => {
-                const summary = {};
-                expenses.forEach(exp => {
-                    const month = exp.date.substring(0, 7);
-                    if (!summary[month]) {
-                        summary[month] = { total: 0, byCategory: {} };
-                    }
-                    summary[month].total += exp.amount;
-                    if (!summary[month].byCategory[exp.category]) {
-                        summary[month].byCategory[exp.category] = 0;
-                    }
-                    summary[month].byCategory[exp.category] += exp.amount;
-                });
-                return Object.entries(summary).sort((a, b) => b[0].localeCompare(a[0]));
-            };
+    <div class="bottom-nav">
+        <div class="nav-icon active" data-tab="dashboard">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </div>
+        <div class="nav-icon" data-tab="expenses">
+            <i class="fas fa-list"></i>
+            <span>Expenses</span>
+        </div>
+        <div class="nav-icon" data-tab="entry">
+            <i class="fas fa-plus"></i>
+            <span>Add</span>
+        </div>
+        <div class="nav-icon" data-tab="loans">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Loans</span>
+        </div>
+        <div class="nav-icon" data-tab="charts">
+            <i class="fas fa-chart-pie"></i>
+            <span>Charts</span>
+        </div>
+    </div>
 
-            const getTotalExpenses = () => {
-                return expenses.reduce((sum, exp) => sum + exp.amount, 0);
-            };
+    <script>
+        // Data Storage
+        let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        let loans = JSON.parse(localStorage.getItem('loans')) || [];
+        let currentDeleteCallback = null;
 
-            const dailySummary = getDailySummary();
-            const monthlySummary = getMonthlySummary();
-            const displayName = activeUser === 'me' ? (myName || 'My') : (gfName || "Girlfriend's");
-
-            if (loading) {
-                return React.createElement('div', { className: 'min-h-screen flex items-center justify-center' },
-                    React.createElement('div', { className: 'text-indigo-600 text-xl' }, 'Loading...')
-                );
-            }
-
-            return React.createElement('div', { className: 'p-4' },
-                React.createElement('div', { className: 'max-w-6xl mx-auto' },
-                    React.createElement('div', { className: 'bg-white rounded-lg shadow-lg p-6 mb-6' },
-                        React.createElement('div', { className: 'flex flex-wrap justify-between items-start gap-4 mb-6' },
-                            React.createElement('div', null,
-                                React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, '💰 Budget Tracker'),
-                                React.createElement('p', { className: 'text-gray-600' }, 'Track expenses for both of you'),
-                                React.createElement('p', { className: 'text-xs text-green-600 mt-1' }, '✓ Data stored locally on this device')
-                            ),
-                            React.createElement('div', { className: 'flex flex-wrap gap-2' },
-                                React.createElement('button', {
-                                    onClick: exportToCSV,
-                                    className: 'px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm'
-                                }, '📥 Export'),
-                                React.createElement('label', { className: 'px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer text-sm' },
-                                    '📤 Import',
-                                    React.createElement('input', {
-                                        type: 'file',
-                                        accept: '.csv',
-                                        onChange: importFromCSV,
-                                        className: 'hidden'
-                                    })
-                                ),
-                                React.createElement('button', {
-                                    onClick: () => setShowSettings(!showSettings),
-                                    className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm'
-                                }, '⚙️ Settings')
-                            )
-                        ),
-                        
-                        showSettings && React.createElement('div', { className: 'bg-indigo-50 rounded-lg p-4 mb-6' },
-                            React.createElement('h3', { className: 'font-bold text-gray-800 mb-3' }, 'Settings'),
-                            React.createElement('div', { className: 'mb-4' },
-                                React.createElement('h4', { className: 'text-sm font-semibold text-gray-700 mb-2' }, 'User Names'),
-                                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 mb-4' },
-                                    React.createElement('div', null,
-                                        React.createElement('label', { className: 'block text-sm text-gray-600 mb-1' }, 'Your Name'),
-                                        React.createElement('input', {
-                                            type: 'text',
-                                            value: myName,
-                                            onChange: (e) => setMyName(e.target.value),
-                                            placeholder: 'Enter your name',
-                                            className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500'
-                                        })
-                                    ),
-                                    React.createElement('div', null,
-                                        React.createElement('label', { className: 'block text-sm text-gray-600 mb-1' }, "Girlfriend's Name"),
-                                        React.createElement('input', {
-                                            type: 'text',
-                                            value: gfName,
-                                            onChange: (e) => setGfName(e.target.value),
-                                            placeholder: "Enter girlfriend's name",
-                                            className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500'
-                                        })
-                                    )
-                                ),
-                                React.createElement('button', {
-                                    onClick: saveNames,
-                                    className: 'bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition'
-                                }, 'Save Names')
-                            )
-                        ),
-                        
-                        React.createElement('div', { className: 'flex gap-2 mb-6' },
-                            React.createElement('button', {
-                                onClick: () => setActiveUser('me'),
-                                className: `flex-1 px-4 py-3 rounded-lg transition ${activeUser === 'me' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
-                            }, '👤 ' + (myName || 'Me')),
-                            React.createElement('button', {
-                                onClick: () => setActiveUser('gf'),
-                                className: `flex-1 px-4 py-3 rounded-lg transition ${activeUser === 'gf' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
-                            }, '👤 ' + (gfName || 'Girlfriend'))
-                        ),
-                        
-                        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4 mb-6' },
-                            React.createElement('div', {
-                                className: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-4 cursor-pointer hover:shadow-lg transition',
-                                onClick: () => setShowBalanceModal(true)
-                            },
-                                React.createElement('div', { className: 'flex items-center gap-2 mb-2' },
-                                    React.createElement('span', { className: 'text-2xl' }, '💳'),
-                                    React.createElement('p', { className: 'text-sm opacity-90' }, 'Account Balance')
-                                ),
-                                React.createElement('p', { className: 'text-3xl font-bold' }, 'Rs. ' + accountBalance.toFixed(2)),
-                                React.createElement('p', { className: 'text-xs opacity-75 mt-1' }, 'Click to update')
-                            ),
-                            React.createElement('div', { className: 'bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg p-4' },
-                                React.createElement('div', { className: 'flex items-center gap-2 mb-2' },
-                                    React.createElement('span', { className: 'text-2xl' }, '💰'),
-                                    React.createElement('p', { className: 'text-sm opacity-90' }, 'Purse Balance')
-                                ),
-                                React.createElement('p', { className: 'text-3xl font-bold' }, 'Rs. ' + purseBalance.toFixed(2)),
-                                React.createElement('button', {
-                                    onClick: () => setShowWithdrawModal(true),
-                                    className: 'mt-2 text-xs bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded transition'
-                                }, '⬇️ Withdraw')
-                            ),
-                            React.createElement('div', { className: 'bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg p-4' },
-                                React.createElement('div', { className: 'flex items-center gap-2 mb-2' },
-                                    React.createElement('span', { className: 'text-2xl' }, '📊'),
-                                    React.createElement('p', { className: 'text-sm opacity-90' }, 'Total Spent')
-                                ),
-                                React.createElement('p', { className: 'text-3xl font-bold' }, 'Rs. ' + getTotalExpenses().toFixed(2))
-                            )
-                        ),
-                        
-                        React.createElement('p', { className: 'text-center text-gray-600 my-8' }, 'Budget Tracker is working! 🎉'),
-                        React.createElement('p', { className: 'text-center text-sm text-gray-500' }, 'Click Settings to set up names, then switch between users to track expenses.')
-                    )
-                )
-            );
+        // Format currency
+        function formatLKR(amount) {
+            return `රු ${parseFloat(amount).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(BudgetTracker));
-    </script>
-</body>
-</html>
+        // Format date
+        function formatDate(date) {
+            const d = new Date(date);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Update last sync time
+        function updateSyncStatus() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        // Save data
+        function saveData() {
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            localStorage.setItem('loans', JSON.stringify(loans));
+            updateSyncStatus();
+            updateDashboard();
+            renderExpenses();
+            renderLoans();
+            renderCharts();
+        }
+
+        // Tab Navigation
+        document.querySelectorAll('.nav-item, .nav-icon').forEach(item => {
+            item.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                document.querySelectorAll('.nav-item, .nav-icon').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                document.querySelectorAll(`.nav-item[data-tab="${tabId}"], .nav-icon[data-tab="${tabId}"]`).forEach(el => {
+                    el.classList.add('active');
+                });
+                
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Add Expense
+        document.getElementById('expenseForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const payment = document.getElementById('payment').value;
+            const note = document.getElementById('note').value;
+            const date = document.getElementById('expenseDate').value;
+            
+            // Validation
+            let isValid = true;
+            
+            if (!amount || amount <= 0) {
+                document.getElementById('amount').classList.add('error');
+                document.getElementById('amountError').classList.add('show');
+                isValid = false;
+            } else {
+                document.getElementById('amount').classList.remove('error');
+                document.getElementById('amountError').classList.remove('show');
+            }
+            
+            if (!category) {
+                document.getElementById('category').classList.add('error');
+                document.getElementById('categoryError').classList.add('show');
+                isValid = false;
+            } else {
+                document.getElementById('category').classList.remove('error');
+                document.getElementById('categoryError').classList.remove('show');
+            }
+            
+            if (!payment) {
+                document.getElementById('payment').classList.add('error');
+                document.getElementById('paymentError').classList.add('show');
+                isValid = false;
+            } else {
+                document.getElementById('payment').classList.remove('error');
+                document.getElementById('paymentError').classList.remove('show');
+            }
+            
+            if (!isValid) return;
+            
+            const expense = {
+                id: Date.now(),
+                amount: amount,
